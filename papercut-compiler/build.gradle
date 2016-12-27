@@ -10,6 +10,7 @@ dependencies {
     compileOnly files(org.gradle.internal.jvm.Jvm.current().getToolsJar())
 
     testCompile deps.junit
+    testCompile deps.mockito
 }
 
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')

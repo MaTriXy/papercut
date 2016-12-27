@@ -47,7 +47,7 @@ public class AnnotationProcessor extends AbstractProcessor {
     private String versionCode;
 
     @Override
-    public synchronized void init(ProcessingEnvironment processingEnv) {
+    public synchronized void init(final ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
 
         versionCode = processingEnv.getOptions().get(OPTION_VERSION_CODE);
@@ -92,6 +92,7 @@ public class AnnotationProcessor extends AbstractProcessor {
             final boolean stopShip;
             final String milestone;
             final String versionCode;
+            final String annotationType;
 
             if (removeThisAnnotation != null) {
                 description = removeThisAnnotation.value();
@@ -99,12 +100,14 @@ public class AnnotationProcessor extends AbstractProcessor {
                 stopShip = removeThisAnnotation.stopShip();
                 milestone = removeThisAnnotation.milestone();
                 versionCode = removeThisAnnotation.versionCode();
+                annotationType = removeThisAnnotation.getClass().getSimpleName();
             } else {
                 description = refactorAnnotation.value();
                 givenDate = refactorAnnotation.date();
                 stopShip = refactorAnnotation.stopShip();
                 milestone = refactorAnnotation.milestone();
                 versionCode = refactorAnnotation.versionCode();
+                annotationType = refactorAnnotation.getClass().getSimpleName();
             }
 
             final Diagnostic.Kind messageKind = stopShip ? Diagnostic.Kind.ERROR : Diagnostic.Kind.WARNING;
@@ -117,32 +120,42 @@ public class AnnotationProcessor extends AbstractProcessor {
                     date = simpleDateFormat.parse(givenDate);
                 }
             } catch (final ParseException e) {
-                messager.printMessage(Diagnostic.Kind.ERROR,"Incorrect date format in @RemoveThis annotation." +
+                messager.printMessage(Diagnostic.Kind.ERROR, "Incorrect date format in Papercut annotation." +
                         "Please use YYYY-MM-DD format.");
             }
 
-            //TODO Need to fix the logic here. Date condition will be met if you don't have a date. Don't want to
-            //TODO have to specify date, milestone, and versionCode. :(
-            if (dateConditionMet(date) || milestoneConditionMet(milestone) || versionCodeConditionMet(versionCode)) {
+            boolean breakConditionMet = false;
+
+            breakConditionMet = breakConditionMet ? breakConditionMet : noConditionsSet(date, milestone, versionCode);
+
+            breakConditionMet = breakConditionMet ? breakConditionMet : dateConditionMet(date);
+            breakConditionMet = breakConditionMet ? breakConditionMet : milestoneConditionMet(milestone);;
+            breakConditionMet = breakConditionMet ? breakConditionMet : versionCodeConditionMet(versionCode);
+
+            if (breakConditionMet) {
                 if (!description.isEmpty()) {
-                    messager.printMessage(messageKind, "@RemoveThis found with description '" + description
-                                    + "' at: ", element);
+                    messager.printMessage(messageKind, String.format("@%1$s found with description %2$s at: ",
+                            annotationType, description), element);
                 } else {
-                    messager.printMessage(messageKind, "@RemoveThis found at: ", element);
+                    messager.printMessage(messageKind, String.format("@%1$s found at: ", annotationType), element);
                 }
             }
         }
     }
 
+    private boolean noConditionsSet(final Date date, final String milestone, final String versionCode) {
+        return date == null && milestone.isEmpty() && versionCode.isEmpty();
+    }
+
     private boolean dateConditionMet(final Date date) {
-        return date != null && (date.after(new Date()) || date.equals(new Date()));
+        return date != null && (date.before(new Date()) || date.equals(new Date()));
     }
 
     private boolean milestoneConditionMet(final String milestone) {
-        return !milestones.contains(milestone);
+        return !milestone.isEmpty() && !milestones.contains(milestone);
     }
 
     private boolean versionCodeConditionMet(final String versionCode) {
-        return Integer.parseInt(versionCode) <= Integer.parseInt(this.versionCode);
+        return !versionCode.isEmpty() && Integer.parseInt(versionCode) <= Integer.parseInt(this.versionCode);
     }
 }

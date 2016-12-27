@@ -37,15 +37,20 @@ import java.util.Set;
         "ie.stu.papercut.Milestone"
 })
 @SupportedSourceVersion(SourceVersion.RELEASE_7)
+@SupportedOptions("versionCode")
 @AutoService(Processor.class)
 public class AnnotationProcessor extends AbstractProcessor {
+    private static final String OPTION_VERSION_CODE = "versionCode";
     private static final Set<String> milestones = new HashSet<>();
 
     private Messager messager;
+    private String versionCode;
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
+
+        versionCode = processingEnv.getOptions().get(OPTION_VERSION_CODE);
 
         messager = processingEnv.getMessager();
     }
@@ -82,21 +87,24 @@ public class AnnotationProcessor extends AbstractProcessor {
                         "code is not currently supported.", element);
             }
 
-            String description;
-            String givenDate;
-            boolean stopShip;
-            String milestone;
+            final String description;
+            final String givenDate;
+            final boolean stopShip;
+            final String milestone;
+            final String versionCode;
 
             if (removeThisAnnotation != null) {
                 description = removeThisAnnotation.value();
                 givenDate = removeThisAnnotation.date();
                 stopShip = removeThisAnnotation.stopShip();
                 milestone = removeThisAnnotation.milestone();
+                versionCode = removeThisAnnotation.versionCode();
             } else {
                 description = refactorAnnotation.value();
                 givenDate = refactorAnnotation.date();
                 stopShip = refactorAnnotation.stopShip();
                 milestone = refactorAnnotation.milestone();
+                versionCode = refactorAnnotation.versionCode();
             }
 
             final Diagnostic.Kind messageKind = stopShip ? Diagnostic.Kind.ERROR : Diagnostic.Kind.WARNING;
@@ -113,7 +121,9 @@ public class AnnotationProcessor extends AbstractProcessor {
                         "Please use YYYY-MM-DD format.");
             }
 
-            if (dateConditionMet(date) || milestoneConditionMet(milestone)) {
+            //TODO Need to fix the logic here. Date condition will be met if you don't have a date. Don't want to
+            //TODO have to specify date, milestone, and versionCode. :(
+            if (dateConditionMet(date) || milestoneConditionMet(milestone) || versionCodeConditionMet(versionCode)) {
                 if (!description.isEmpty()) {
                     messager.printMessage(messageKind, "@RemoveThis found with description '" + description
                                     + "' at: ", element);
@@ -130,5 +140,9 @@ public class AnnotationProcessor extends AbstractProcessor {
 
     private boolean milestoneConditionMet(final String milestone) {
         return !milestones.contains(milestone);
+    }
+
+    private boolean versionCodeConditionMet(final String versionCode) {
+        return Integer.parseInt(versionCode) <= Integer.parseInt(this.versionCode);
     }
 }

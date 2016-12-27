@@ -60,4 +60,7 @@ public @interface Refactor {
      * @return The {@link Milestone} to refactor code by
      */
     String milestone() default "";
+
+    //TODO Documentation
+    String versionCode() default "";
 }

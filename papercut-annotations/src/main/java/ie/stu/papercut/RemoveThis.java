@@ -59,4 +59,7 @@ public @interface RemoveThis {
      * @return The {@link Milestone} to remove code by
      */
     String milestone() default "";
+
+    //TODO Documentation
+    String versionCode() default "";
 }
